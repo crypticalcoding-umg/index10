@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área de una Superficie de Revolución</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.24.2/plotly.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #000000; 
+            color: #ffa600; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px; 
+        }
+        .calculator { 
+            border: 1px solid #ccc; 
+            padding: 20px; 
+            border-radius: 10px; 
+            width: 100%; 
+            max-width: 600px; 
+            background: #fff; 
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); 
+        }
+        .calculator input, .calculator button { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 5px; 
+            border: 1px solid #ccc; 
+            font-size: 1em; 
+        }
+        .calculator button {
+            background-color: #ffa600;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .calculator button:hover {
+            background-color: #1d4ed8;
+        }
+        .result { 
+            font-weight: bold; 
+            color: #ffbb00; 
+            margin-top: 10px; 
+            padding: 10px;
+            background-color: #f8fafc;
+            border-radius: 5px;
+        }
+        #plot {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+        .error {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .formula {
+            background-color: #f8fafc;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Área de una Superficie de Revolución</h1>
+    <div class="calculator">
+        <div class="formula">
+            Fórmula: A = 2π ∫ f(x) √(1 + [f'(x)]²) dx
+        </div>
+        <label for="curve-function">Función de la curva y=f(x):</label>
+        <input type="text" id="curve-function" placeholder="Ej. sqrt(x)" value="sqrt(x)">
+        <label for="limit-a">Límite inferior (a):</label>
+        <input type="number" id="limit-a" value="0" step="0.1">
+        <label for="limit-b">Límite superior (b):</label>
+        <input type="number" id="limit-b" value="1" step="0.1">
+        <button onclick="calculateSurfaceArea()">Calcular Área</button>
+        <div class="result" id="result-output"></div>
+        <div id="plot"></div>
+    </div>
+
+    <script>
+        function numericalIntegration(func, a, b, n = 1000) {
+            const h = (b - a) / n;
+            let sum = 0.5 * (func(a) + func(b));
+            
+            for (let i = 1; i < n; i++) {
+                const x = a + i * h;
+                sum += func(x);
+            }
+            
+            return h * sum;
+        }
+
+        function calculateSurfaceArea() {
+            const funcInput = document.getElementById("curve-function").value;
+            const a = parseFloat(document.getElementById("limit-a").value);
+            const b = parseFloat(document.getElementById("limit-b").value);
+
+            try {
+                // Crear una función evaluable de mathjs
+                const f = math.parse(funcInput);
+                const df = math.derivative(f, 'x');
+                
+                // Crear la función para el área de superficie
+                const integrand = (x) => {
+                    const fx = f.evaluate({x: x});
+                    const dfx = df.evaluate({x: x});
+                    return 2 * Math.PI * fx * Math.sqrt(1 + dfx * dfx);
+                };
+                
+                // Calcular la integral numéricamente
+                const surfaceArea = numericalIntegration(integrand, a, b);
+                
+                // Mostrar el resultado redondeado a 4 decimales
+                document.getElementById("result-output").innerHTML = 
+                    `El área de la superficie es: ${math.round(surfaceArea, 4)} unidades cuadradas`;
+
+                // Graficar la función
+                plotFunction(f, a, b);
+            } catch (error) {
+                document.getElementById("result-output").innerHTML = 
+                    `<span class="error">Error: ${error.message}. Verifica la sintaxis de la función.</span>`;
+            }
+        }
+
+        function plotFunction(f, a, b) {
+            // Generar puntos para la gráfica
+            const points = 100;
+            const dx = (b - a) / points;
+            const x = [];
+            const y = [];
+
+            for (let i = 0; i <= points; i++) {
+                const xi = a + i * dx;
+                x.push(xi);
+                try {
+                    y.push(f.evaluate({x: xi}));
+                } catch {
+                    y.push(null);
+                }
+            }
+
+            // Crear la gráfica
+            const trace = {
+                x: x,
+                y: y,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'f(x)',
+                line: {
+                    color: '#2b6cb0',
+                    width: 2
+                }
+            };
+
+            const layout = {
+                title: 'Gráfica de la función',
+                xaxis: {
+                    title: 'x',
+                    zeroline: true
+                },
+                yaxis: {
+                    title: 'y',
+                    zeroline: true
+                }
+            };
+
+            Plotly.newPlot('plot', [trace], layout);
+        }
+
+        // Calcular inicialmente con los valores por defecto
+        calculateSurfaceArea();
+    </script>
+</body>
+</html>
